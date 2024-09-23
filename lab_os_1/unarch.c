@@ -37,34 +37,42 @@ int unarch(char* path_to_arch,char* path_for_unarch)
     for (int i = 0; i < num_files; i++) 
     {
         fscanf(archive_file, "%s\n%ld\n", files[i].path, &files[i].size);
-        printf("%s\n%ln\n", files[i].path, &files[i].size);
+        printf("%s\n%ld\n", files[i].path, files[i].size);
     }
-}
-
-int read_files(char* path_arch) {
-  int unpacked = FALSE;
-  DIR* dir = opendir(path_arch);
-  if (!dir) {
-    perror("Ошибка открытия директории");
-    exit(EXIT_FAILURE);
-  }
-  struct dirent* entry;
-  while ((entry = readdir(dir)) != NULL)
-  {
-    if (entry->d_type == DT_REG && strstr(entry->d_name, ".bin") != NULL)
+    for (int i = 0; i < num_files; i++)
     {
-        FileHeader file_header;
-        FileHeader fileHeader;
-        strncpy(fileHeader.filename, entry->d_name,
-            sizeof(fileHeader.filename) - 1);
-        fileHeader.filename[sizeof(fileHeader.filename) - 1] = '\0';
-        snprintf(fileHeader.path, strlen(path_arch) + strlen(entry->d_name) + 2,
-            "%s/%s", path_arch, entry->d_name);
-        unarch(file_header.path, path_arch);
-        // delete_file(file_header.path);
-        unpacked = TRUE;
+      char buf[4096];
+      // printf("Файл %d: %s\n", i, files[i].path);
+      snprintf(buf, sizeof(buf), "%s%s", path_for_unarch, files[i].path);
+      printf("%s\n", buf);
+
+      char dir_path[4096];
+      strncpy(dir_path, buf, sizeof(dir_path) - 1);
+      dir_path[sizeof(dir_path) - 1] = '\0';
+    
+      // Убираем имя файла, чтобы получить путь к директории
+      char* last_slash = strrchr(dir_path, '/');
+      if (last_slash != NULL) {
+          *last_slash = '\0';  // Заменяем последний слеш на конец строки
+      }
+
+      // Создаем директорию
+      create_dir(dir_path);
+
+      FILE* output_file = fopen(buf, "wb");
+      if (!output_file)
+      {
+        perror("Ошибка при создании файла");
+        exit(EXIT_FAILURE);
+      }
+      char* buffer = malloc(files[i].size);
+      fread(buffer, 1, files[i].size, archive_file);
+      fwrite(buffer, 1, files[i].size, output_file);
+
+      fclose(output_file);
+      free(buffer);
     }
-  }
-  closedir(dir);
-  return unpacked;
+    fclose(archive_file);
+    free(files);
+    return EXIT_SUCCESS;
 }
