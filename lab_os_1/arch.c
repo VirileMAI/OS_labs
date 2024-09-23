@@ -1,24 +1,22 @@
 #include "arch.h"
 
-
 int readFiles(const char* dirPath, FileHeader** files,
-              int* alloc_FileHeader, int* index) {
-    //Откроем директорию
+              int* alloc_FileHeader, int* index, const char* base_name, const char* relative_path) {
     DIR* dir = opendir(dirPath);
     if (!dir) {
         perror("Ошибка при открытии директории");
         exit(EXIT_FAILURE);
     }
-    struct dirent* entry;  //Структура из dirent.h
+    struct dirent* entry;
+
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_REG) {
-            if (*index >= *alloc_FileHeader)
-            {
+            // Проверка выделения памяти для файлов
+            if (*index >= *alloc_FileHeader) {
                 int new_size = *alloc_FileHeader + BLOCK_SIZE;
-                FileHeader* new_fileHeader = realloc(files, sizeof(FileHeader) * new_size);
-                if (new_fileHeader == NULL)
-                {
-                    free(files);
+                FileHeader* new_fileHeader = realloc(*files, sizeof(FileHeader) * new_size);
+                if (new_fileHeader == NULL) {
+                    free(*files);
                     closedir(dir);
                     perror("Ошибка выделения памяти\n");
                     exit(EXIT_FAILURE);
@@ -29,31 +27,38 @@ int readFiles(const char* dirPath, FileHeader** files,
             FileHeader fileHeader;
             strncpy(fileHeader.filename, entry->d_name, sizeof(fileHeader.filename) - 1);
             fileHeader.filename[sizeof(fileHeader.filename) - 1] = '\0';
-            snprintf(fileHeader.path,
-                     strlen(dirPath) + strlen(entry->d_name) + 2, "%s/%s",
-                     dirPath, entry->d_name);
-            printf("%s\n", fileHeader.path);
-            //получаем информацию о размере
-            struct stat st;  //Структура из sys/stat.
+
+            // Формируем полный путь к файлу
+            snprintf(fileHeader.path, sizeof(fileHeader.path), "%s/%s", dirPath, entry->d_name);
+
+            // Формируем относительный путь к файлу
+            char relative_file_path[1024];
+            snprintf(relative_file_path, sizeof(relative_file_path), "%s/%s", relative_path, entry->d_name);
+
+            // Получаем информацию о размере
+            struct stat st;
             if (stat(fileHeader.path, &st) == -1) {
                 perror("Ошибка при получении информации о файле");
                 continue;
-                // exit(EXIT_FAILURE);
             } else {
                 fileHeader.size = st.st_size;
             }
+
+            // Сохраняем относительный путь в filename
+            strncpy(fileHeader.filename, relative_file_path, sizeof(fileHeader.filename) - 1);
+            fileHeader.filename[sizeof(fileHeader.filename) - 1] = '\0';
+
             (*files)[(*index)++] = fileHeader;
-        }
-        else if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 &&
-                 strcmp(entry->d_name, "..") != 0) 
-        {
+        } else if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
             char subDirPath[1024];
-            snprintf(subDirPath, strlen(dirPath) + strlen(entry->d_name) + 2,
-                     "%s/%s", dirPath, entry->d_name);
-            int error = readFiles(subDirPath, files, alloc_FileHeader, index);
-            if (error == EXIT_FAILURE) {
-                return EXIT_FAILURE;
-            }
+            snprintf(subDirPath, sizeof(subDirPath), "%s/%s", dirPath, entry->d_name);
+
+            // Обновляем относительный путь для подкаталога
+            char new_relative_path[1024];
+            snprintf(new_relative_path, sizeof(new_relative_path), "%s/%s", relative_path, entry->d_name);
+
+            // Рекурсивно обрабатываем подкаталоги
+            readFiles(subDirPath, files, alloc_FileHeader, index, base_name, new_relative_path);
         }
     }
     closedir(dir);
@@ -66,7 +71,6 @@ void free_fileHeader(FileHeader* fileHeader) {
         fileHeader = NULL;
     }
 }
-
 void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader *files) {
     FILE* archiveFile = fopen(path_to_arch, "wb");
     fprintf(archiveFile, "%s\n", "#arch.bin");
@@ -77,11 +81,9 @@ void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader 
         fwrite(files[i].filename, sizeof(char), strlen(files[i].filename) + 1, archiveFile);
         fprintf(archiveFile, "\n%ld\n", files[i].size);
     }
-
     for (int i = 0; i < index; i++)
     {
         FILE* file = fopen(files[i].path, "rb");
-
         if (file)
         {
             char buffer[4096];
