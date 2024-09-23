@@ -64,26 +64,26 @@ int unarchive(char* dirPath, char* dirPath2) {
     printf("%s\n%ln\n", files[i].filename, &files[i].size);
   }
   // createTreeOfDirs(files, numFiles, dirPath2);
-  // for (int i = 0; i < numFiles; ++i) {
-  //   char buf[4097];
-  //   strcpy(buf, dirPath2);
-  //   strcat(buf, "/");
-  //   strcat(buf, files[i].filename);
-  //   FILE* outputFile = fopen(buf, "wb");
-  //   if (!outputFile) {
-  //     perror("Ошибка при создании файла");
-  //     return EXIT_FAILURE;
-  //   }
-  //   char* buffer = malloc(files[i].size);
-  //   fread(buffer, 1, files[i].size, archiveFile);
-  //   fwrite(buffer, 1, files[i].size, outputFile);
+  for (int i = 0; i < numFiles; ++i) {
+    char buf[4097];
+    strcpy(buf, dirPath2);
+    strcat(buf, "/");
+    strcat(buf, files[i].filename);
+    FILE* outputFile = fopen(buf, "wb");
+    if (!outputFile) {
+      perror("Ошибка при создании файла");
+      return EXIT_FAILURE;
+    }
+    char* buffer = malloc(files[i].size);
+    fread(buffer, 1, files[i].size, archiveFile);
+    fwrite(buffer, 1, files[i].size, outputFile);
 
-  //   fclose(outputFile);
-  //   free(buffer);
-  // }
-  // fclose(archiveFile);
-  // free(files);
-  // return 1;
+    fclose(outputFile);
+    free(buffer);
+  }
+  fclose(archiveFile);
+  free(files);
+  return 1;
 }
 
 int readFiles(char* dirPath) {

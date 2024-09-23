@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
           baseName = malloc(length);
           if (baseName) {
             strcpy(baseName, lastSlash + 1);  // Копируем строку
-            printf("Полученное имя: %s\n", baseName);
+            // printf("Полученное имя: %s\n", baseName);
           } else {
               perror("Ошибка выделения памяти");
               return EXIT_FAILURE;
