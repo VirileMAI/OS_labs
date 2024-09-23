@@ -32,18 +32,15 @@ int readFiles(const char* dirPath, FileHeader** files,
             snprintf(fileHeader.path,
                      strlen(dirPath) + strlen(entry->d_name) + 2, "%s/%s",
                      dirPath, entry->d_name);
-
+            printf("%s\n", fileHeader.path);
             //получаем информацию о размере
-            struct stat st;  //Структура из sys/stat.h
-            // printf("Проверка пути: %s\n", fileHeader.path);
+            struct stat st;  //Структура из sys/stat.
             if (stat(fileHeader.path, &st) == -1) {
                 perror("Ошибка при получении информации о файле");
                 continue;
                 // exit(EXIT_FAILURE);
             } else {
                 fileHeader.size = st.st_size;
-                // printf("Путь к файлу %s: %s и его размер: %ld\n", fileHeader.filename,
-                //        fileHeader.path, fileHeader.size);
             }
             (*files)[(*index)++] = fileHeader;
         }
