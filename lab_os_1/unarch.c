@@ -19,6 +19,18 @@ int unarch(char* path_to_arch, char* base_path_for_unarch) {
         printf("%s", "Данный файл не является архивом");
         exit(EXIT_FAILURE);
     }
+    char pass[256];
+    fgets(pass, sizeof(pass), archive_file);
+
+    char input_pass[256];
+    printf("Введите пароль от архива: ");
+    fgets(input_pass, sizeof(input_pass), stdin);
+
+    if (strcmp(pass, input_pass) != 0) {
+        printf("Неверный пароль!\n");
+        fclose(archive_file);
+        exit(EXIT_FAILURE);
+    }
 
     int num_files;
     fscanf(archive_file, "%d\n", &num_files);

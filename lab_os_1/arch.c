@@ -72,8 +72,22 @@ void free_fileHeader(FileHeader* fileHeader) {
     }
 }
 void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader *files) {
+    char pass[256];
+        printf("Введите пароль для архива(Не менее 8 символов): ");
+        fgets(pass, sizeof(pass), stdin);
+        pass[strcspn(pass, "\n")] = '\0';
+        if (strlen(pass) >= 8)
+        {
+          printf("Пароль принят!\n");
+        }
+        else
+        {
+          printf("Пароль слишком короткий, введите новый\n");
+          exit(EXIT_FAILURE);
+        }
     FILE* archiveFile = fopen(path_to_arch, "wb");
     fprintf(archiveFile, "%s\n", "#arch.bin");
+    fprintf(archiveFile, "%s\n", pass);
     fprintf(archiveFile, "%d\n", index);
     //Запись информации о файлах
     for (int i = 0; i < index; i++)
