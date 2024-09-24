@@ -71,20 +71,75 @@ void free_fileHeader(FileHeader* fileHeader) {
         fileHeader = NULL;
     }
 }
+
+int spec_symbol_in_pass(const char* pass, const char* spec_symbol) {
+    for (int i = 0; i < strlen(pass); i++) {
+        if (strchr(spec_symbol, pass[i])) {
+            return OK;
+        }
+    }
+    return NO_SPEC_SYMBOL; // символ не найден
+}
+
+int check_pass(const char* pass) {
+    const char *spec_symbol = "!@#$^&%%*()—_+=;:,./\\?|`~[]{";
+    int big_let = 0, digit = 0, symbol = 0;
+
+    if (strlen(pass) < 8)
+        return SHORT_PASS;
+
+    for (int i = 0; i < strlen(pass); i++) {
+        if (isupper(pass[i])) big_let++;
+        else if (isdigit(pass[i])) digit++;
+        else if (strchr(spec_symbol, pass[i])) symbol++;
+        else if (pass[i] == ' ' || (!isalpha(pass[i]))) return WRONG_SYMBOL;
+    }
+
+    if (big_let == 0) return NO_CAP_LET;
+    if (digit == 0) return NO_DIGIT;
+    if (symbol == 0) return NO_SPEC_SYMBOL;
+
+    return OK;
+}
+
+
+
+
 void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader *files) {
     char pass[256];
-        printf("Введите пароль для архива(Не менее 8 символов): ");
-        fgets(pass, sizeof(pass), stdin);
-        pass[strcspn(pass, "\n")] = '\0';
-        if (strlen(pass) >= 8)
-        {
-          printf("Пароль принят!\n");
-        }
-        else
-        {
-          printf("Пароль слишком короткий, введите новый\n");
-          exit(EXIT_FAILURE);
-        }
+    printf("Введите пароль для архива\nПароль должен содержать:\n1-хотя бы одну заглавную букву\n2-хотя бы одну цифру\n3-хотя бы один спец. символ\nИ не должен содержать:\n1-Пробелы\n2-буквы языка, помимо латинского алфавита\n");
+    fgets(pass, sizeof(pass), stdin);
+    pass[strcspn(pass, "\n")] = '\0';
+    int check_result = check_pass(pass);
+    // printf("%d\n", check_result);
+    if (check_result == OK)
+        printf("Пароль принят!\n");
+    else if (check_result == WRONG_SYMBOL)
+    {
+        printf("Неккоректный пароль, введите новый пароль\n");
+        exit(EXIT_FAILURE);
+    }
+    else if (check_result == SHORT_PASS)
+    {
+        printf("Пароль слишком короткий, введите новый пароль\n");
+        exit(EXIT_FAILURE);
+    }
+    else if (check_result == NO_CAP_LET)
+    {
+        printf("В пароле нет заглавных букв, введите новый пароль\n");
+        exit(EXIT_FAILURE);
+    }
+    else if (check_result == NO_DIGIT)
+    {
+        printf("В пароле нет цифр, введите новый пароль\n");
+        exit(EXIT_FAILURE);
+    }
+    else if (check_result == NO_SPEC_SYMBOL)
+    {
+        printf("Пароль не содержит спец. символов\n");
+        exit(EXIT_FAILURE);
+    }
+
     FILE* archiveFile = fopen(path_to_arch, "wb");
     fprintf(archiveFile, "%s\n", "#arch.bin");
     fprintf(archiveFile, "%s\n", pass);
