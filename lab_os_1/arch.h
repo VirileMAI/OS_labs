@@ -15,6 +15,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <unistd.h>
 
 typedef struct {
     char filename[1024];
