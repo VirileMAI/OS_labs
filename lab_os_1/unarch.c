@@ -1,9 +1,20 @@
 #include "unarch.h"
+#include <ctype.h>
 
 void create_dir(const char* path) {
   char command[1024];
   sprintf(command, "mkdir -p %s", path);
   system(command);
+}
+
+// Функция для проверки, является ли строка числом
+int is_numeric(const char* str) {
+  for (int i = 0; str[i] != '\0'; i++) {
+    if (!isdigit(str[i])) {
+      return 0;  // Не число
+    }
+  }
+  return 1;  // Число
 }
 
 int unarch(char* path_to_arch, char* base_path_for_unarch) {
@@ -17,19 +28,31 @@ int unarch(char* path_to_arch, char* base_path_for_unarch) {
   fgets(str, sizeof(str), archive_file);
   if (strcmp(str, "#arch.bin\n") != 0) {
     printf("%s", "Данный файл не является архивом");
-    exit(EXIT_FAILURE);
-  }
-  char pass[256];
-  fgets(pass, sizeof(pass), archive_file);
-
-  char input_pass[256];
-  printf("Введите пароль от архива: ");
-  fgets(input_pass, sizeof(input_pass), stdin);
-
-  if (strcmp(pass, input_pass) != 0) {
-    printf("Неверный пароль!\n");
     fclose(archive_file);
     exit(EXIT_FAILURE);
+  }
+
+  char pass_or_num[256];
+  fgets(pass_or_num, sizeof(pass_or_num), archive_file);
+
+  // Убираем символ новой строки '\n' из прочитанного значения
+  pass_or_num[strcspn(pass_or_num, "\n")] = '\0';
+
+  if (is_numeric(pass_or_num)) {  // Проверяем, если строка является числом
+    printf("Пароль не установлен для этого архива. Продолжаем распаковку.\n");
+  } else {
+    char input_pass[256];
+    printf("Введите пароль от архива: ");
+    fgets(input_pass, sizeof(input_pass), stdin);
+
+    // Убираем символ новой строки '\n' из ввода пользователя
+    input_pass[strcspn(input_pass, "\n")] = '\0';
+
+    if (strcmp(pass_or_num, input_pass) != 0) {
+      printf("Неверный пароль!\n");
+      fclose(archive_file);
+      exit(EXIT_FAILURE);
+    }
   }
 
   int num_files;
@@ -56,8 +79,7 @@ int unarch(char* path_to_arch, char* base_path_for_unarch) {
     dir_path[sizeof(dir_path) - 1] = '\0';
     char* last_slash = strrchr(dir_path, '/');
     if (last_slash != NULL) {
-      *last_slash =
-          '\0';  // Убираем имя файла, чтобы получить путь к директории
+      *last_slash = '\0';  // Убираем имя файла, чтобы получить путь к директории
     }
     create_dir(dir_path);
 

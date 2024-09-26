@@ -1,6 +1,6 @@
 #include "arch.h"
 
-int readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader,
+void readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader,
               int* index, const char* base_name, const char* relative_path) {
   DIR* dir = opendir(dirPath);
   if (!dir) {
@@ -70,7 +70,6 @@ int readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader,
     }
   }
   closedir(dir);
-  return EXIT_SUCCESS;
 }
 
 void free_fileHeader(FileHeader* fileHeader) {
@@ -113,64 +112,85 @@ int check_pass(const char* pass) {
   return OK;
 }
 
-void create_arch(int index, char* path_for_arch, char* path_to_arch,
-                 FileHeader* files) {
+void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader* files) {
   char buff[100];
-  // printf("Название архива: %s\n", path_to_arch);
   snprintf(buff, sizeof(path_to_arch) + 2, "/%s", path_to_arch);
   buff[sizeof(buff) - 1] = '\0';
-  // printf("Название архива: %s\n", buff);
-  for (int i = 0; i < index; i++)
-  {
-    files[i].filename[sizeof(files[i].filename) - 1] = '\0';
-    // printf("filename: %s\n", files[i].filename);
 
-    if (strcmp(buff, files[i].filename) == 0)
-    {
+  // Проверка на существование архива
+  for (int i = 0; i < index; i++) {
+    files[i].filename[sizeof(files[i].filename) - 1] = '\0';
+
+    if (strcmp(buff, files[i].filename) == 0) {
       printf("Такой архив уже есть!\n");
       exit(EXIT_FAILURE);
     }
   }
-  char* pass;
-  printf(
-      "Введите пароль для архива\nПароль должен содержать:\n1-хотя бы одну "
-      "заглавную букву\n2-хотя бы одну цифру\n3-хотя бы один спец. символ\nИ "
-      "не должен содержать:\n1-Пробелы\n2-буквы языка, помимо латинского "
-      "алфавита\n");
-  pass = getpass("");
-  // fgets(pass, sizeof(pass), stdin);
-  pass[strcspn(pass, "\n")] = '\0';
-  int check_result = check_pass(pass);
-  // printf("%d\n", check_result);
-  if (check_result == OK)
-    printf("Пароль принят!\n");
-  else if (check_result == WRONG_SYMBOL) {
-    printf("Неккоректный пароль, введите новый пароль\n");
-    exit(EXIT_FAILURE);
-  } else if (check_result == SHORT_PASS) {
-    printf("Пароль слишком короткий, введите новый пароль\n");
-    exit(EXIT_FAILURE);
-  } else if (check_result == NO_CAP_LET) {
-    printf("В пароле нет заглавных букв, введите новый пароль\n");
-    exit(EXIT_FAILURE);
-  } else if (check_result == NO_DIGIT) {
-    printf("В пароле нет цифр, введите новый пароль\n");
-    exit(EXIT_FAILURE);
-  } else if (check_result == NO_SPEC_SYMBOL) {
-    printf("Пароль не содержит спец. символов\n");
+
+  char choice;
+  printf("Хотите установить пароль для архива? (y/n): ");
+  scanf(" %c", &choice);  // Запрашиваем у пользователя выбор
+
+  char* pass = NULL;
+
+  // Проверка выбора пользователя
+  switch (choice) {
+    case 'y': {
+      printf(
+          "Введите пароль для архива\nПароль должен содержать:\n1-хотя бы одну "
+          "заглавную букву\n2-хотя бы одну цифру\n3-хотя бы один спец. символ\nИ "
+          "не должен содержать:\n1-Пробелы\n2-буквы языка, помимо латинского "
+          "алфавита\n");
+      pass = getpass("");
+      pass[strcspn(pass, "\n")] = '\0';
+      int check_result = check_pass(pass);
+
+      if (check_result == OK) {
+        printf("Пароль принят!\n");
+      } else {
+        if (check_result == WRONG_SYMBOL) {
+          printf("Некорректный пароль, введите новый пароль\n");
+        } else if (check_result == SHORT_PASS) {
+          printf("Пароль слишком короткий, введите новый пароль\n");
+        } else if (check_result == NO_CAP_LET) {
+          printf("В пароле нет заглавных букв, введите новый пароль\n");
+        } else if (check_result == NO_DIGIT) {
+          printf("В пароле нет цифр, введите новый пароль\n");
+        } else if (check_result == NO_SPEC_SYMBOL) {
+          printf("Пароль не содержит спец. символов\n");
+        }
+        exit(EXIT_FAILURE);  // Прерываем выполнение программы при ошибке
+      }
+      break;
+    }
+    case 'n':
+      // Никаких дополнительных действий не нужно для варианта без пароля
+      break;
+    default:
+      printf("Неверный выбор. Программа завершена.\n");
+      exit(EXIT_FAILURE);
+  }
+
+  // Архив создается только после того, как все проверки пройдены
+  FILE* archiveFile = fopen(path_to_arch, "wb");
+  if (!archiveFile) {
+    perror("Ошибка при открытии архива для записи");
     exit(EXIT_FAILURE);
   }
 
-  FILE* archiveFile = fopen(path_to_arch, "wb");
   fprintf(archiveFile, "%s\n", "#arch.bin");
-  fprintf(archiveFile, "%s\n", pass);
+  if (pass != NULL) {
+    fprintf(archiveFile, "%s\n", pass);
+  }
   fprintf(archiveFile, "%d\n", index);
-  //Запись информации о файлах
+
+  // Запись информации о файлах
   for (int i = 0; i < index; i++) {
-    fwrite(files[i].filename, sizeof(char), strlen(files[i].filename) + 1,
-           archiveFile);
+    fwrite(files[i].filename, sizeof(char), strlen(files[i].filename) + 1, archiveFile);
     fprintf(archiveFile, "\n%ld\n", files[i].size);
   }
+
+  // Запись содержимого файлов в архив
   for (int i = 0; i < index; i++) {
     FILE* file = fopen(files[i].path, "rb");
     if (file) {
@@ -182,10 +202,12 @@ void create_arch(int index, char* path_for_arch, char* path_to_arch,
       fclose(file);
     } else {
       perror("Ошибка при открытии файла для записи");
-      fclose(file);
+      fclose(archiveFile);
       free_fileHeader(files);
       exit(EXIT_FAILURE);
     }
   }
+
   fclose(archiveFile);
 }
+

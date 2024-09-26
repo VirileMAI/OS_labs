@@ -26,7 +26,7 @@ typedef struct {
 
 void free_fileHeader(FileHeader*fileHeader);
 
-int readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader, int* index, const char* base_name, const char* relative_path);
+void readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader, int* index, const char* base_name, const char* relative_path);
 
 int spec_symbol_in_pass(const char* pass, const char* spec_symbol);
 
