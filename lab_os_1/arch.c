@@ -1,5 +1,7 @@
 #include "arch.h"
 
+#include "arch.h"
+
 void readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader,
               int* index, const char* base_name, const char* relative_path) {
   DIR* dir = opendir(dirPath);
@@ -8,9 +10,11 @@ void readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader,
     exit(EXIT_FAILURE);
   }
   struct dirent* entry;
+  int hasFiles = 0; // Флаг, показывающий, содержит ли директория файлы
 
   while ((entry = readdir(dir)) != NULL) {
     if (entry->d_type == DT_REG) {
+      hasFiles = 1; // Директория содержит хотя бы один файл
       // Проверка выделения памяти для файлов
       if (*index >= *alloc_FileHeader) {
         int new_size = *alloc_FileHeader + BLOCK_SIZE;
@@ -67,10 +71,37 @@ void readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader,
       // Рекурсивно обрабатываем подкаталоги
       readFiles(subDirPath, files, alloc_FileHeader, index, base_name,
                 new_relative_path);
+
+      hasFiles = 1; // Если были подкаталоги, устанавливаем флаг
     }
   }
+
+  // Если директория пуста (не содержит файлов или подкаталогов), сохраняем её в архив с размером 0
+  if (!hasFiles) {
+    if (*index >= *alloc_FileHeader) {
+      int new_size = *alloc_FileHeader + BLOCK_SIZE;
+      FileHeader* new_fileHeader = realloc(*files, sizeof(FileHeader) * new_size);
+      if (new_fileHeader == NULL) {
+        free(*files);
+        closedir(dir);
+        perror("Ошибка выделения памяти\n");
+        exit(EXIT_FAILURE);
+      }
+      *files = new_fileHeader;
+      *alloc_FileHeader = new_size;
+    }
+
+    FileHeader dirHeader;
+    // Сохраняем относительный путь к директории с размером 0
+    snprintf(dirHeader.path, sizeof(dirHeader.path), "%s", dirPath);
+    snprintf(dirHeader.filename, sizeof(dirHeader.filename), "%s/", relative_path); // '/' в конце обозначает папку
+    dirHeader.size = 0;
+    (*files)[(*index)++] = dirHeader;
+  }
+
   closedir(dir);
 }
+
 
 void free_fileHeader(FileHeader* fileHeader) {
   if (fileHeader != NULL) {
@@ -210,4 +241,3 @@ void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader*
 
   fclose(archiveFile);
 }
-
