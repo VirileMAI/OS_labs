@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <openssl/sha.h> 
 
 typedef struct {
     char filename[1024];
@@ -23,6 +24,10 @@ typedef struct {
     char otn_path[1024];
     long size;
 }   FileHeader;
+
+void hash_password(const char* password, unsigned char* hash_output);
+
+void hash_to_string(const unsigned char* hash, char* hash_string);
 
 void free_fileHeader(FileHeader*fileHeader);
 

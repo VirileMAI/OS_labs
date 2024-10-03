@@ -1,6 +1,16 @@
 #include "arch.h"
 
-#include "arch.h"
+// Функция для хеширования пароля
+void hash_password(const char* password, unsigned char* hash_output) {
+  SHA256((unsigned char*)password, strlen(password), hash_output);
+}
+
+// Преобразование хеша в строку для хранения
+void hash_to_string(const unsigned char* hash, char* hash_string) {
+  for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+    sprintf(hash_string + (i * 2), "%02x", hash[i]);
+  }
+}
 
 void readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader,
               int* index, const char* base_name, const char* relative_path) {
@@ -10,7 +20,8 @@ void readFiles(const char* dirPath, FileHeader** files, int* alloc_FileHeader,
     exit(EXIT_FAILURE);
   }
   struct dirent* entry;
-  int hasFiles = 0; // Флаг, показывающий, содержит ли директория файлы
+  // Флаг, показывающий, содержит ли директория файлы
+  int hasFiles = 0;
 
   while ((entry = readdir(dir)) != NULL) {
     if (entry->d_type == DT_REG) {
@@ -119,6 +130,7 @@ int spec_symbol_in_pass(const char* pass, const char* spec_symbol) {
   return NO_SPEC_SYMBOL;  // символ не найден
 }
 
+// Функция проверки пароля
 int check_pass(const char* pass) {
   const char* spec_symbol = "!@#$^&%%*()—_+=;:,./\\?|`~[]{";
   int big_let = 0, digit = 0, symbol = 0;
@@ -143,6 +155,7 @@ int check_pass(const char* pass) {
   return OK;
 }
 
+//Основная функция создания архива
 void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader* files) {
   char buff[100];
   snprintf(buff, sizeof(path_to_arch) + 2, "/%s", path_to_arch);
@@ -159,8 +172,9 @@ void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader*
   }
 
   char choice;
+  // Запрашиваем у пользователя выбор
   printf("Хотите установить пароль для архива? (y/n): ");
-  scanf(" %c", &choice);  // Запрашиваем у пользователя выбор
+  scanf(" %c", &choice); 
 
   char* pass = NULL;
 
@@ -190,19 +204,17 @@ void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader*
         } else if (check_result == NO_SPEC_SYMBOL) {
           printf("Пароль не содержит спец. символов\n");
         }
-        exit(EXIT_FAILURE);  // Прерываем выполнение программы при ошибке
+        exit(EXIT_FAILURE);
       }
       break;
     }
     case 'n':
-      // Никаких дополнительных действий не нужно для варианта без пароля
       break;
     default:
       printf("Неверный выбор. Программа завершена.\n");
       exit(EXIT_FAILURE);
   }
 
-  // Архив создается только после того, как все проверки пройдены
   FILE* archiveFile = fopen(path_to_arch, "wb");
   if (!archiveFile) {
     perror("Ошибка при открытии архива для записи");
@@ -210,8 +222,14 @@ void create_arch(int index, char* path_for_arch, char* path_to_arch, FileHeader*
   }
 
   fprintf(archiveFile, "%s\n", "#arch.bin");
+  //Если есть пароль, записываем его второй стрчокой
   if (pass != NULL) {
-    fprintf(archiveFile, "%s\n", pass);
+    unsigned char password_hash[SHA256_DIGEST_LENGTH];
+    hash_password(pass, password_hash);
+    char password_hash_string[SHA256_DIGEST_LENGTH * 2 + 1];
+    hash_to_string(password_hash, password_hash_string);
+
+    fprintf(archiveFile, "%s\n", password_hash_string);
   }
   fprintf(archiveFile, "%d\n", index);
 
