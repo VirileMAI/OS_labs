@@ -12,11 +12,12 @@ all: clean $(TARGET)
 install: $(TARGET)
 	sudo cp $^ /usr/bin/
 	echo /usr/bin/$^ | sudo tee -a /etc/shells
-	sudo chsh -s /usr/bin/$^
+	sudo chsh -s /usr/bin/$^ $(USER)
 
 uninstall:
-	sudo rm -rf /usr/bin/$(TARGET)
-
+	sudo rm -f /usr/bin/$(TARGET)
+	sudo sed -i '/\/usr\/bin\/$(PROJECT)/d' /etc/shells
+	sudo chsh -s /bin/bash $(USER)
 
 $(TARGET): dir $(OBJ)
 	$(CC) $(OBJ) -o $(TARGET)
