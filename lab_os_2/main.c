@@ -127,9 +127,9 @@ int my_cd(char **args) {
     if (args[1] == NULL) {
         chdir(home);
     }
-    else if (strcmp(args[1], "~"))
+    else if (strcmp(args[1], "~") == 0)
     {
-
+        chdir(home);
     } 
     else 
     {

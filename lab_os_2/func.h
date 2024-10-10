@@ -1,5 +1,5 @@
-#ifndef FUNC
-#define FUNC
+#ifndef FUNC_H
+#define FUNC_H
 
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -19,7 +19,9 @@ struct PID_list
     struct PID_list *next_process;
 };
 
-struct PID_list *head_list;
+extern struct PID_list *head_list;
+
+extern char *builtin_str[];
 
 int check_background(char **args);
 
@@ -35,6 +37,8 @@ int my_help(char **args);
 
 int my_exit(char **args);
 
+extern int (*builtin_func[]) (char**);
+
 void signal_handler(int sig);
 
 int num_builtins();
@@ -49,4 +53,4 @@ char *readLine(void);
 
 void loop(void);
 
-#endif FUNC
+#endif
