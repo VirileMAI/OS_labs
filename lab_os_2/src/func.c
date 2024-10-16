@@ -1,7 +1,5 @@
 #include "func.h"
 
-int kakaya_to_peremennaya = 0;
-
 struct PID_list *head_list;
 
 char *builtin_str[] = {
@@ -65,7 +63,6 @@ void delete_last_elem() {
     if (head_list == NULL) {return;}
 
     if (head_list->next_process == NULL) {
-        printf("Удален последний процесс: PID %d\n", head_list->PID);
         free(head_list);
         head_list = NULL;
         return;
@@ -125,8 +122,9 @@ int my_exit(char **args) {
     return 0;
 }
 
+// функция для возрата стандартного терминала
 int my_chsh(char **args) {
-    const char *new_shell = "/bin/bash"; // Замените на стандартную оболочку, если нужно
+    const char *new_shell = "/bin/bash";
     char *user = getenv("USER");
 
     if (user == NULL) {
@@ -134,7 +132,6 @@ int my_chsh(char **args) {
         return 1;
     }
 
-    // Формируем команду для изменения оболочки
     char command[256];
     snprintf(command, sizeof(command), "chsh -s %s %s", new_shell, user);
 
@@ -142,21 +139,29 @@ int my_chsh(char **args) {
     int result = system(command);
     if (result == -1) {
         perror("Ошибка при смене оболочки");
-        return 1;
+        return -1;
     }
 
     printf("Оболочка успешно изменена на %s. Пожалуйста, перезапустите терминал.\n", new_shell);
-    return 1; // Успешное выполнение команды
+    return 1; 
 }
 
 // Функция обработки сигнала SIGINT(Ctrl+c)
 void signal_handler(int sig) {
-    //Если список пуст, завершаем работу терминала
+    char cwd[PATH_MAX];
+    char* user = getenv("USER");
+    char hostname[1024];
+    gethostname(hostname, 1024);
     if (head_list == NULL)
     {
-        printf("\nРодительский процесс убит | PID %d\n", getpid());
-        kill(getpid(),SIGTERM);
-        waitpid(-1, NULL, 0);
+        printf("\n");
+         if (getcwd (cwd, sizeof(cwd)) == NULL)
+        {
+            perror("getcwd");
+        }
+        printf("\033[38;5;46m%s@%s\033[0m:\033[38;5;111m%s\033[0m $ ",user, hostname ,cwd);
+        fflush(stdout);
+        return;
     }
     else
     {
@@ -184,11 +189,19 @@ int launch(char **args, int background)
     pid_t pid;
     int status;
 
+    if (strcmp(args[0], "cat") == 0 && args[1] == NULL) {
+        printf("Ошибка: команда 'cat' требует файл или ввод данных.\n");
+        return 1;
+    }
+
     pid = fork(); // Создаем новый процесс
     if (pid == 0)
     {
         // Дочерний процесс
-        setpgid(0, 0);
+        if (strcmp(args[0], "man") != 0)
+        {
+            setpgid(0, 0);
+        }
         if (execvp(args[0], args) == -1) {
             exit(EXIT_FAILURE); 
         }

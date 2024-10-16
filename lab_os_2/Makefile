@@ -7,7 +7,7 @@ PREF_OBJ = ./obj/
 SRC = $(wildcard $(PREF_SRC)*.c)
 OBJ = $(patsubst $(PREF_SRC)%.c, $(PREF_OBJ)%.o, $(SRC))
 
-all: clean $(TARGET)
+all: clean uninstall $(TARGET) install
 
 install: $(TARGET)
 	sudo cp $^ /usr/bin/
@@ -16,8 +16,7 @@ install: $(TARGET)
 
 uninstall:
 	sudo rm -f /usr/bin/$(TARGET)
-	sudo sed -i '/\/usr\/bin\/$(PROJECT)/d' /etc/shells
-	sudo chsh -s /bin/bash $(USER)
+	sudo sed -i '/\/usr\/bin\/$(TARGET)/d' /etc/shells
 
 $(TARGET): dir $(OBJ)
 	$(CC) $(OBJ) -o $(TARGET)
