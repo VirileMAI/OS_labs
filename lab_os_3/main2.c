@@ -88,27 +88,26 @@ int main(int argc, char *argv[])
     close(fd1[0]);  // Закрываем конец для чтения
     close(fd2[0]);  // Закрываем конец для чтения
 
-    printf("Считано %d байтов: %s\n", dataProcessed1, buff_for_1);
-    printf("Считано %d байтов: %s\n", dataProcessed2, buff_for_2);
+    printf("Считано %d байтов из первого потока.\n", dataProcessed1);
+    printf("Считано %d байтов из второго потока.\n", dataProcessed2);
 
     // XOR результат
-    unsigned char *buf_for_res = malloc(dataProcessed1 > dataProcessed2 ? dataProcessed1 : dataProcessed2);
+    unsigned char *buf_for_res = malloc(dataProcessed1);
 
-    FILE *output = fopen("result.txt", "w+");
+    FILE *output = fopen("result.txt", "wb");
 
-    int max_len = (dataProcessed1 > dataProcessed2) ? dataProcessed1 : dataProcessed2;
     for (int i = 0; i < dataProcessed1; i++) {
         unsigned char char1 = buff_for_1[i];
         unsigned char char2 = buff_for_2[i % dataProcessed2];
         buf_for_res[i] = char1 ^ char2;
-        if (buf_for_res[i] == '\0') buf_for_res[i] = char1;
-
-        fprintf(output, "%c", buf_for_res[i]);
         printf("result[%d]: %d ^ %d = %d\n", i, char1, char2, buf_for_res[i]);
     }
 
+    // Записываем весь результат одним вызовом fwrite
+    fwrite(buf_for_res, 1, dataProcessed1, output);
+
     printf("Результат: ");
-    for (int j = 0; j < max_len; j++) 
+    for (int j = 0; j < dataProcessed1; j++) 
         printf("%d|%c ", buf_for_res[j], buf_for_res[j]);
     printf("\n");
 

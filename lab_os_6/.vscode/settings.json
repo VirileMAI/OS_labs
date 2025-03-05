@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "dbus.h": "c",
+        "dbus-threads.h": "c",
+        "dbus-bus.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "array": "c",
+        "string.h": "c",
+        "system_error": "c"
+    }
+}

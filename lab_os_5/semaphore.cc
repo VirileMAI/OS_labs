@@ -1,97 +1,99 @@
 #include <iostream>
 #include <thread>
-#include <semaphore.h>
+#include <semaphore>
 #include <vector>
+#include <chrono>
 #include <string>
-#include <atomic>
 #include <random>
 
-std::atomic<bool> isConfirmed{false}; // Флаг, указывающий на получение подтверждения
-std::string confirmedRelative; // Имя того, кому дозвонился Полуэкт
-sem_t confirmationSemaphore; // Семафор для подтверждения
-sem_t relativeSemaphore; // Семафор для общения родственников
+std::vector<std::string> roles = {"Полуэкт", "Бабушка1", "Бабушка2", "Мама", "Девушка1"};
+std::random_device rd;
+std::mt19937 gen(rd());
 
-void poluekt(const std::vector<std::string>& relatives) {
-    std::this_thread::sleep_for(std::chrono::seconds(2)); // Задержка перед звонком Полуэкта
-    std::cout << "Полуэкт пытается дозвониться...\n";
+struct Phone {
+    std::counting_semaphore<1> access; // Семафор для доступа к телефону
+    Phone() : access(1) {}
+};
 
-    // Выбор случайного родственника для звонка
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distr(0, relatives.size() - 1);
-    int chosenRelativeIndex = distr(gen);
-    
-    // Полуэкт дозванивается до выбранного родственника
-    if (!isConfirmed.exchange(true)) {
-        confirmedRelative = relatives[chosenRelativeIndex];
-        std::cout << "Полуэкт дозвонился до " << confirmedRelative << " и подтвердил, что он на работе.\n";
-        sem_post(&confirmationSemaphore); // Сообщить выбранному родственнику напрямую
+std::vector<Phone> phones(roles.size());
+
+void log(const std::string &message) {
+    std::cout << message << std::endl;
+}
+
+void poluekt() {
+    std::uniform_int_distribution<> distr(1, roles.size() - 1);
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Имитирует работу Полуэкта
+
+        log("Полуэкт пытается позвонить...");
+
+        int contactIndex = distr(gen);
+        std::string contact = roles[contactIndex];
+
+        log("Полуэкт звонит " + contact + ".");
+
+        // Полуэкт пытается захватить оба телефона: свой и контактного собеседника
+        if (phones[0].access.try_acquire()) { // Захватывает свой телефон
+            if (phones[contactIndex].access.try_acquire()) { // Захватывает телефон собеседника
+                log("Полуэкт получил подтверждение от " + contact + ".");
+                std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Имитирует разговор
+                phones[contactIndex].access.release(); // Освобождает телефон собеседника
+                phones[0].access.release(); // Освобождает свой телефон
+                break;
+            } else {
+                log("Телефон " + contact + " занят. Полуэкт пробует снова...");
+                phones[0].access.release(); // Освобождает свой телефон
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
     }
 }
 
-void relative(const std::string& name, const std::vector<std::string>& relatives) {
-    if (name == confirmedRelative) {
-        // Если это тот, кому Полуэкт позвонил первым, сразу получает подтверждение
-        sem_wait(&confirmationSemaphore);
-        std::cout << name << " получил подтверждение от Полуэкта, что с ним всё в порядке.\n";
-        return; // Завершение работы потока, чтобы не участвовать в дальнейших подтверждениях
-    }
-    
-    while (!isConfirmed) {
-        sem_wait(&relativeSemaphore); // Ждать возможности для звонка другому родственнику
-        
-        // Выбор случайного собеседника из остальных родственников
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> distr(0, relatives.size() - 2);
-        std::vector<std::string> otherRelatives;
-        for (const auto& rel : relatives) {
-            if (rel != name) otherRelatives.push_back(rel); // Исключаем себя из списка
+void relative(const std::string &role, int index) {
+    std::uniform_int_distribution<> distr(1, roles.size() - 1);
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        log(role + " пытается дозвониться...");
+
+        int contactIndex = distr(gen);
+        if (roles[contactIndex] == role) {
+            continue; // Пропускаем самозвонок
         }
-        std::string chosenRelative = otherRelatives[distr(gen)];
-        
-        std::cout << name << " пытается дозвониться до " << chosenRelative << "...\n";
-        std::cout << name << " поговорил с " << chosenRelative << " и узнал, что Полуэкт пока не звонил.\n";
 
-        // Передача возможности звонка следующему родственнику
-        sem_post(&relativeSemaphore);
-        
-        // Пауза перед следующей попыткой общения
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::string contact = roles[contactIndex];
+        log(role + " звонит " + contact + ".");
+
+        // Родственник пытается захватить оба телефона: свой и телефон собеседника
+        if (phones[index].access.try_acquire()) { // Захватывает свой телефон
+            if (phones[contactIndex].access.try_acquire()) { // Захватывает телефон собеседника
+                log(contact + " получил подтверждение от " + role + ".");
+                std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Имитирует разговор
+                phones[contactIndex].access.release(); // Освобождает телефон собеседника
+                phones[index].access.release(); // Освобождает свой телефон
+                break;
+            } else {
+                log("Телефон " + contact + " занят. " + role + " ожидает возможности позвонить.");
+                phones[index].access.release(); // Освобождает свой телефон
+            }
+        }
     }
-
-    // Дождаться подтверждения от других участников, если это не первый позвонивший Полуэкту
-    sem_wait(&confirmationSemaphore);
-    std::cout << name << " получил подтверждение, что с Полуэктом всё в порядке.\n";
-    sem_post(&confirmationSemaphore); // Передать подтверждение другим
 }
 
 int main() {
-    sem_init(&confirmationSemaphore, 0, 0); // Инициализация семафора подтверждения
-    sem_init(&relativeSemaphore, 0, 1); // Инициализация семафора общения родственников (1, чтобы начать цепочку)
+    std::thread poluektThread(poluekt);
 
-    // Список родственников
-    std::vector<std::string> relatives = {"Бабушка А", "Бабушка Б", "Мама", "Девушка 1", "Девушка 2"};
-    
-    // Запуск потока Полуэкта
-    std::thread poluektThread(poluekt, std::ref(relatives));
-    
-    // Запуск потоков для каждого родственника
-    std::vector<std::thread> relativeThreads;
-    for (const auto& name : relatives) {
-        relativeThreads.emplace_back(relative, name, std::ref(relatives));
-    }
-    
-    // Ожидание завершения всех потоков
+    std::vector<std::thread> relatives;
+    relatives.push_back(std::thread(relative, std::string("Бабушка1"), 1));
+    relatives.push_back(std::thread(relative, std::string("Бабушка2"), 2));
+    relatives.push_back(std::thread(relative, std::string("Мама"), 3));
+    relatives.push_back(std::thread(relative, std::string("Девушка1"), 4));
+
     poluektThread.join();
-    for (auto& t : relativeThreads) {
-        t.join();
-    }
-    
-    // Уничтожение семафоров
-    sem_destroy(&confirmationSemaphore);
-    sem_destroy(&relativeSemaphore);
+    for (auto &th : relatives) th.join();
 
-    std::cout << "Все участники получили подтверждение. Завершение работы.\n";
     return 0;
 }
