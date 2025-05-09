@@ -1,0 +1,27 @@
++-------------------+--------------+----------+
+|city               |count_employee|sum_salary|
++-------------------+--------------+----------+
+|London             |1             |6500      |
+|Munich             |1             |10000     |
+|Toronto            |2             |19000     |
+|Southlake          |5             |28800     |
+|South San Francisco|44            |151100    |
+|Seattle            |18            |159200    |
+|Oxford             |34            |295500    |
+|Geneva             |0             |null      |
+|Tokyo              |0             |null      |
+|Stretford          |0             |null      |
+|Hiroshima          |0             |null      |
+|Roma               |0             |null      |
+|Sao Paulo          |0             |null      |
+|Singapore          |0             |null      |
+|Whitehorse         |0             |null      |
+|Mexico City        |0             |null      |
+|South Brunswick    |0             |null      |
+|Milano             |0             |null      |
+|Utrecht            |0             |null      |
+|Bombay             |0             |null      |
+|Bern               |0             |null      |
+|Beijing            |0             |null      |
+|Sydney             |0             |null      |
++-------------------+--------------+----------+
